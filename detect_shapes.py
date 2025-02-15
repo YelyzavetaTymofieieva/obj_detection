@@ -190,16 +190,12 @@ class ProblemSquare(Problem):
         super().__init__(Shape.SQUARE, datapoints)
         
     def solve(self) -> Solution: 
-        return solve_square(self.datapoints)
-
-
-def solve_square(datapoints: list[Datapoint]) -> Solution:
-    if (solution := solve_square_from_side(datapoints)) is not None:
-        return solution
-    if (solution := solve_square_from_rectangular_coordinates(datapoints)) is not None:
-        return solution
-            
-    raise ValueError(f"Could not solve for Square with datapoints {datapoints}")
+        if (solution := solve_square_from_side(self.datapoints)) is not None:
+            return solution
+        if (solution := solve_square_from_rectangular_coordinates(self.datapoints)) is not None:
+            return solution
+                
+        raise ValueError(f"Could not solve for Square with datapoints {self.datapoints}")
 
 
 def solve_triangle(datapoints: list[Datapoint])-> Optional[Solution]:
