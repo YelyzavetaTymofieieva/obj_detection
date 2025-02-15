@@ -2,7 +2,7 @@ from dataclasses import dataclass, fields
 from enum import Enum
 from typing import Optional
 import math
-import pytest
+import pytest 
 
 # Sample input:
 # Square Side 1 TopRight 1 1 
@@ -18,6 +18,7 @@ class Shape(Enum):
     CIRCLE = 1
     SQUARE = 2
     RECTANGLE = 3
+    TRIANGLE = 4
     
     def __str__(self) -> str:
         return self.name.capitalize()
@@ -30,7 +31,7 @@ class Shape(Enum):
 
 
 
-@dataclass
+@dataclass 
 class Datapoint:
     @classmethod
     def try_parse(cls, input_str: str) -> Optional[tuple["Datapoint", str]]: # parse a Side object from a string.
@@ -40,25 +41,32 @@ class Datapoint:
         num_args = cls.get_num_args()
 
         if input_str.startswith(name):
-            parts = input_str.split(" ", maxsplit=1 + num_args)
+            # e.g. parts = ["Side", "3.5", "ExtraText"]
+            parts = input_str.split(" ", maxsplit=1 + num_args) #Split the Input into Parts 
             assert len(parts) >= (1 + num_args), f"Parsing {name} failed. Got parts {parts}"
 
-            name_part, tail_parts = parts[0], parts[1:]
+            name_part, tail_parts = parts[0], parts[1:] # name_part should match name (e.g. "Side") 
             assert name_part == name, f"Invalid input to datapoint type {name}: {name_part}"
 
             args = [float(arg_str) for arg_str in tail_parts[:num_args]]
+            #turn this part of the split string into a float for future manipulations
             if len(tail_parts) == num_args:
                 # There is no remainder from splitting the string into 1 (name) + num_args
                 # Hence, we return an empty string for the remainder
                 return cls(*args), ""
+                 #cls(*args) dynamically creates an instance of the class
             else:
                 assert len(tail_parts) == num_args + 1
                 return cls(*args), tail_parts[-1]
         return None
     
     @classmethod
-    def get_name(cls) -> str:
+    def get_name(cls) -> str: #returns the name of the class as a string
         return cls.__name__
+    """
+    This is useful when parsing because it ensures that the input string starts with the expected name of the Datapoint subclass (e.g., Side).
+    # Example: If cls refers to Side, then name = "Side".
+    """
     
     @classmethod
     def get_num_args(cls) -> int:
@@ -87,6 +95,15 @@ class Datapoint:
     
     # e.g. Datapoint.parse_datapoints(Shape.TRIANGLE, "Side 5 Angle 90")
     # e.g. output [Side(5.0), Angle(90.0)]
+
+# These subclasses allow us to parse and structure geometric information from strings.
+ #The subclasses below represent different types of data points that can be 
+    # extracted from an input string and later used in geometric or spatial 
+    # computations. Let's break down their purpose and relationships.
+
+@dataclass
+class Angle(Datapoint):
+    value: float
                 
 @dataclass
 class Side(Datapoint):
@@ -123,6 +140,7 @@ SHAPE_TO_VALID_DATAPOINT_TYPES: dict[Shape, list[Datapoint]] = {
     Shape.CIRCLE: [Radius],
     Shape.SQUARE: [Side] + RECTANGULAR_COORDINATES,
     Shape.RECTANGLE: [Side] + RECTANGULAR_COORDINATES,
+    Shape.TRIANGLE: [Side, Angle]
 }
 
 
@@ -160,6 +178,8 @@ class Problem:
             return solve_rect_from_opposing_coord(self.datapoints)
         if self.shape == Shape.CIRCLE:
             return solve_circle_from_r(self.datapoints)
+        if self.shape == Shape.TRIANGLE:
+            return solve_triangle(self.datapoints)
         raise ValueError(f"Could not solve for shape: {self.shape}")
 
 
@@ -170,6 +190,36 @@ def solve_square(datapoints: list[Datapoint]) -> Solution:
         return solution
             
     raise ValueError(f"Could not solve for Square with datapoints {datapoints}")
+
+
+def solve_triangle(datapoints: list[Datapoint])-> Optional[Solution]:
+    angle: Optional[Angle] = None
+    sides: list[Side] = []
+    for datapoint in datapoints:
+        if isinstance(datapoint, Side):
+            sides.append(datapoint)
+        if isinstance(datapoint, Angle):
+            angle = datapoint
+            
+    if len(sides) < 2 or angle is None:
+        return None
+
+    side1 = sides[0].value
+    side2 = sides[1].value
+    angle_degrees = angle.value
+    angle_radians = math.radians(angle_degrees)
+    # Calculate the third side using the law of cosines
+        # c = √(a² + b² - 2ab × cos(C))
+    side3 = math.sqrt(side1**2 + side2**2 - 2 * side1 * side2 * math.cos(angle_radians))
+
+    # Calculate perimeter
+    perimeter = round(side1 + side2 + side3,2)
+
+    # Calculate area using the formula: 0.5 * a * b * sin(angle)
+    area = round(0.5 * side1 * side2 * math.sin(angle_radians), 2)
+
+    return Solution(shape = Shape.TRIANGLE, perimeter=perimeter, area=area)
+
 
 def solve_square_from_side(datapoints: list[Datapoint]) -> Optional[Solution]:
     for datapoint in datapoints:
@@ -312,7 +362,7 @@ def test_solve():
         Solution(Shape.SQUARE, perimeter=20, area=25)
     
     assert Problem(Shape.CIRCLE, [Radius(2)]).solve() == \
-        Solution(Shape.CIRCLE, perimeter=12.56, area=12.56)
+        Solution(Shape.CIRCLE, perimeter=12.57, area=12.57)
     
     assert Problem(Shape.RECTANGLE,[TopRight(2,1),BottomLeft(-2, -1)]).solve() == \
         Solution(Shape.RECTANGLE, perimeter= 12, area= 8) 
