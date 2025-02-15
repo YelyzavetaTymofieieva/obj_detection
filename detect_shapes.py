@@ -190,12 +190,44 @@ class ProblemSquare(Problem):
         super().__init__(Shape.SQUARE, datapoints)
         
     def solve(self) -> Solution: 
-        if (solution := solve_square_from_side(self.datapoints)) is not None:
+        if (solution := self.solve_square_from_side(self.datapoints)) is not None:
             return solution
-        if (solution := solve_square_from_rectangular_coordinates(self.datapoints)) is not None:
+        if (solution := self.solve_square_from_rectangular_coordinates(self.datapoints)) is not None:
             return solution
                 
         raise ValueError(f"Could not solve for Square with datapoints {self.datapoints}")
+    @staticmethod 
+    def solve_square_from_side(datapoints: list[Datapoint]) -> Optional[Solution]:
+        for datapoint in datapoints:
+            if isinstance(datapoint, Side):
+                return Solution(
+                    shape=Shape.SQUARE,
+                    perimeter=4 * datapoint.value,
+                    area=datapoint.value * datapoint.value,
+                )
+        return None
+    @staticmethod
+    def solve_square_from_rectangular_coordinates(datapoints: list[Datapoint]) -> Optional[Solution]:
+        # For square, I can solve both from adjacent and opposite coordinates
+        if (solution := ProblemSquare.solve_square_from_adjacent_coordinates(datapoints)) is not None:
+            return solution
+        return None
+    @staticmethod
+    def solve_square_from_adjacent_coordinates(datapoints: list[Datapoint]) -> Optional[Solution]:
+        rec_coords: list[RectangularCoordinate] = [
+            d for d in datapoints if isinstance(d, RectangularCoordinate)
+        ]
+        # Pairwise comparison
+        for (i, first) in enumerate(rec_coords):
+            for second in rec_coords[i + 1:]:
+                validate_unique_rectangular_coordinates(first, second)
+                if first.x == second.x:
+                    side = abs(first.y - second.y) 
+                if first.y == second.y:
+                    side = abs(first.x - second.x)
+                assert side > 0, "Side must be greater than 0"
+                return ProblemSquare.solve_square_from_side([Side(value=side)])
+        return None
 
 
 def solve_triangle(datapoints: list[Datapoint])-> Optional[Solution]:
@@ -227,22 +259,6 @@ def solve_triangle(datapoints: list[Datapoint])-> Optional[Solution]:
     return Solution(shape = Shape.TRIANGLE, perimeter=perimeter, area=area)
 
 
-def solve_square_from_side(datapoints: list[Datapoint]) -> Optional[Solution]:
-    for datapoint in datapoints:
-        if isinstance(datapoint, Side):
-            return Solution(
-                shape=Shape.SQUARE,
-                perimeter=4 * datapoint.value,
-                area=datapoint.value * datapoint.value,
-            )
-    return None
-
-def solve_square_from_rectangular_coordinates(datapoints: list[Datapoint]) -> Optional[Solution]:
-    # For square, I can solve both from adjacent and opposite coordinates
-    if (solution := solve_square_from_adjacent_coordinates(datapoints)) is not None:
-        return solution
-    return None
-
 def validate_unique_rectangular_coordinates(first: RectangularCoordinate, second: RectangularCoordinate):
     assert not (first.x == second.x and first.y == second.y)
     if first.y > second.y:
@@ -258,21 +274,6 @@ def validate_unique_rectangular_coordinates(first: RectangularCoordinate, second
         assert second.get_name().endswith("Right")
         assert first.get_name().endswith("Left")    
 
-def solve_square_from_adjacent_coordinates(datapoints: list[Datapoint]) -> Optional[Solution]:
-    rec_coords: list[RectangularCoordinate] = [
-        d for d in datapoints if isinstance(d, RectangularCoordinate)
-    ]
-    # Pairwise comparison
-    for (i, first) in enumerate(rec_coords):
-        for second in rec_coords[i + 1:]:
-            validate_unique_rectangular_coordinates(first, second)
-            if first.x == second.x:
-                side = abs(first.y - second.y) 
-            if first.y == second.y:
-                side = abs(first.x - second.x)
-            assert side > 0, "Side must be greater than 0"
-            return solve_square_from_side([Side(value=side)])
-    return None
 
 # def solve_from_opposing_coordinates(shape: Shape, datapoints: list[Datapoint]) -> Optional[Solution]:
 def solve_rect_from_opposing_coord(datapoints: list[Datapoint]) -> Optional[Solution]:
@@ -378,15 +379,15 @@ def test_solve():
     
 # unit test for solve_sq from rect coord 
 def test_solve_square_from_side():
-    assert solve_square_from_side([Side(2)]) == \
+    assert ProblemSquare.solve_square_from_side([Side(2)]) == \
     Solution(Shape.SQUARE, perimeter= 8, area= 4)
     
-    assert solve_square_from_side([Radius(1)]) == None
+    assert ProblemSquare.solve_square_from_side([Radius(1)]) == None
     
 # unit test for solve sq from adj coord
 
 def test_solve_square_from_adjacent_coordinates():
-   assert solve_square_from_adjacent_coordinates([TopRight(1,1), BottomRight(1,-1)]) == \
+   assert ProblemSquare.solve_square_from_adjacent_coordinates([TopRight(1,1), BottomRight(1,-1)]) == \
        Solution(Shape.SQUARE, perimeter= 8, area= 4)
 
 # unit test for solve from opposing coord         
