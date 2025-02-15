@@ -166,7 +166,11 @@ class Problem:
         except Exception:
             raise ValueError("no datapoints provided")
         shape = Shape.parse_shape(shape_str)
-        return Problem(
+        if shape == Shape.SQUARE:
+            return ProblemSquare(
+            datapoints=Datapoint.parse_datapoints(shape,datapoints))
+        else:
+            return Problem(
             shape=shape,
             datapoints=Datapoint.parse_datapoints(shape, datapoints)
         )
@@ -181,6 +185,13 @@ class Problem:
         if self.shape == Shape.TRIANGLE:
             return solve_triangle(self.datapoints)
         raise ValueError(f"Could not solve for shape: {self.shape}")
+
+class ProblemSquare(Problem):
+    def __init__(self, datapoints:list[Datapoint]):
+        super().__init__(Shape.SQUARE, datapoints)
+        
+    def solve(self) -> Solution: 
+        return solve_square(self.datapoints)
 
 
 def solve_square(datapoints: list[Datapoint]) -> Solution:
@@ -343,7 +354,7 @@ def test_fail_to_parse_datapoints():
 # unit test for parse_problem   
 
 def test_parse_problem():
-    assert Problem.parse_problem("Square Side 4") == Problem(Shape.SQUARE,[Side(4)]) 
+    assert Problem.parse_problem("Square Side 4") == ProblemSquare([Side(4)]) 
     assert Problem.parse_problem(
         "Rectangle TopRight 2 1 BottomLeft -2 -1"
     ) == Problem(Shape.RECTANGLE,[TopRight(2,1), BottomLeft(-2,-1)])
@@ -355,7 +366,12 @@ def test_parse_shape():
     assert Shape.parse_shape("Circle") == Shape.CIRCLE
     assert Shape.parse_shape("Square") == Shape.SQUARE
     assert Shape.parse_shape("Rectangle") == Shape.RECTANGLE
+
 # unit test for solve  
+def test_solve_square():
+    assert ProblemSquare([Side(5)]).solve() == \
+        Solution(Shape.SQUARE, perimeter=20, area=25)
+    
 
 def test_solve():
     assert Problem(Shape.SQUARE,[Side(5)]).solve() == \
