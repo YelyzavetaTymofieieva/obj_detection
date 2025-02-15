@@ -176,8 +176,7 @@ class Problem:
         )
     
     def solve(self) -> Solution:  
-        if self.shape == Shape.SQUARE:
-            return solve_square(self.datapoints)
+        
         if self.shape == Shape.RECTANGLE:
             return solve_rect_from_opposing_coord(self.datapoints)
         if self.shape == Shape.CIRCLE:
@@ -374,9 +373,7 @@ def test_solve_square():
     
 
 def test_solve():
-    assert Problem(Shape.SQUARE,[Side(5)]).solve() == \
-        Solution(Shape.SQUARE, perimeter=20, area=25)
-    
+
     assert Problem(Shape.CIRCLE, [Radius(2)]).solve() == \
         Solution(Shape.CIRCLE, perimeter=12.57, area=12.57)
     
